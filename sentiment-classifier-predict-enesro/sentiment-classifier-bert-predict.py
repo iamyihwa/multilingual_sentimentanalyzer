@@ -1,7 +1,7 @@
-#on the terminal: 
+#on the terminal:
 #export FLASK_APP=flaskclassification.py
 #flask run    (--host=0.0.0.0   this part is required when the process needs to be accessed from other computers )
-    
+
 
 from flask import Flask, request
 import re
@@ -83,7 +83,7 @@ class ColaProcessor(DataProcessor):
     def get_labels(self):
         """See base class."""
         return ["P", "N","NEU", "NONE"]
-        #changed by yihwa 2019 05 07 
+        #changed by yihwa 2019 05 07
 	#return ["0", "1"]
 
     def _create_examples(self, lines, set_type):
@@ -107,7 +107,7 @@ app = Flask(__name__)
 from pytorch_pretrained_bert.modeling import BertForSequenceClassification, BertConfig
 from pytorch_pretrained_bert.tokenization import BertTokenizer
 
-processor = ColaProcessor() 
+processor = ColaProcessor()
 
 label_list = processor.get_labels()
 num_labels = len(label_list)
@@ -120,24 +120,24 @@ tokenizer = BertTokenizer.from_pretrained(model_dir, do_lower_case='false')
 
 
 
-#Load in the text data and predict 
+#Load in the text data and predict
 @app.route('/')
 def hello_world():
-    return '''<h3> Welcome to Taiger Multi Lingual Sentiment analysis service! </h3>
+    return '''<h3> Welcome to Multi Lingual Sentiment analysis service! </h3>
          <h3>"http://0.0.0.0:5401/enesro_sentiment_analyzer?text=your text" returns the result of sentiment classifier.</h3>'''
 
 
 @app.route('/enesro_sentiment_analyzer')#, methods = ["POST"])
 def query_sent_analyzer():
 #	if request.method == 'POST':
-	#import pandas as pd 
+	#import pandas as pd
 	#df_test = pd.read_csv('./data/test.csv', sep = '\t')
 	#tagger: SequenceTagger = SequenceTagger.load_from_file('model/es-ner-glove.pt')
 	text=request.args.get('text')
 
 
-	import torch 
-	max_seq_length = 128 
+	import torch
+	max_seq_length = 128
 
 
 	tokens = tokenizer.tokenize(text)
@@ -145,37 +145,37 @@ def query_sent_analyzer():
     		tokens = tokens[:(max_seq_length - 2)]
 	tokens = ["[CLS]"] + tokens + ["[SEP]"]
 	input_ids = tokenizer.convert_tokens_to_ids(tokens)
-	segment_ids = [0] * len(tokens)      
-	input_mask = [1] * len(input_ids)  
+	segment_ids = [0] * len(tokens)
+	input_mask = [1] * len(input_ids)
 	# Zero-pad up to the sequence length.
 	padding = [0] * (max_seq_length - len(input_ids))
 	input_ids += padding
 	input_mask += padding
-	segment_ids += padding	
+	segment_ids += padding
 
-	#change to pytorch tensor 
+	#change to pytorch tensor
 
 	input_ids = torch.tensor(input_ids , dtype = torch.long)
 	#all_tokens = torch.tensor(tokens, dtype = torch.long)
 	segment_ids = torch.tensor(segment_ids, dtype = torch.long)
 	input_mask = torch.tensor(input_mask, dtype = torch.long)
 
-	#change dimension so that there is a batch dimension 
+	#change dimension so that there is a batch dimension
 	input_ids = input_ids.view(1, input_ids.size()[0])
 	segment_ids = segment_ids.view(1, segment_ids.size()[0])
 	input_mask = input_mask.view(1, input_mask.size()[0])
 	logits = model(input_ids, segment_ids, input_mask, labels=None)
-	
+
 
 	softmax = torch.nn.functional.softmax(logits)
 	conf, idx = torch.max(softmax, 0)
-	#somehow returned idx were all 0s, need to check 
+	#somehow returned idx were all 0s, need to check
 
 
-	predicted_label = sent_labels[conf.argmax()] 
+	predicted_label = sent_labels[conf.argmax()]
 	conf_val = conf.max().detach().numpy()
-	print_label = " Label: %s (%.2f) " % (predicted_label, conf_val) 
-	
+	print_label = " Label: %s (%.2f) " % (predicted_label, conf_val)
+
 	return '''{}'''.format(print_label)
 
 
